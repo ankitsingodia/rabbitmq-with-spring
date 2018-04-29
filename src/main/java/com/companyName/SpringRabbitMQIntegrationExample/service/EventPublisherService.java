@@ -8,7 +8,6 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate.RabbitConverterFuture;
-import org.springframework.amqp.rabbit.core.BatchingRabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -23,18 +22,10 @@ public class EventPublisherService {
 	@Autowired
 	AsyncRabbitTemplate asyncRabbitTemplate;
 	
-	public void publishEvent(Object message){
-		
-		for (int i = 0; i < 10; i++) {
-			publish(message);
-		}
-	}
-	
-
-	private void publish(Object message){
+	public void publishEvent(final Object message){
 
 		
-		RabbitConverterFuture<String> future = this.asyncRabbitTemplate.convertSendAndReceive("",Constants.SNS_QUEUE, message,new MessagePostProcessor() {
+		RabbitConverterFuture<String> future = this.asyncRabbitTemplate.convertSendAndReceive("ss",Constants.SNS_QUEUE, message,new MessagePostProcessor() {
 		
 			@Override
 			public Message postProcessMessage(Message message) {
@@ -58,15 +49,21 @@ public class EventPublisherService {
 
 			@Override
 			public void onSuccess(Boolean result) {
-				System.out.println("Publish Result " + result);
+				
+				if(result)
+					System.out.println("Message published successfully");
+				else
+					System.err.println("Publishing failed for a reason: " + future.getNackCause());
 				
 			}
 
 			@Override
 			public void onFailure(Throwable ex) {
-				System.out.println("Publish Failed: " + ex);
+				System.err.println("Publishing failed due to an exception: " + ex);
 			}
 		});
+		
+		
 		
 		
 		/*
@@ -101,43 +98,50 @@ public class EventPublisherService {
 		future.addCallback(new ListenableFutureCallback<Object>() {
 
 			@Override
-			public void onSuccess(Object result) {
+			public void onSuccess(final Object reply) {
 				
-				System.out.println("Reply received from the subscriber and thus acknowledged: " + result);
+				System.out.println("Reply received from the subscriber and thus acknowledged: " + reply);
+				
 			}
 
 			@Override
-			public void onFailure(Throwable ex) {
+			public void onFailure(final Throwable ex) {
 				
-				System.out.println("Didn't got the reply..Failure occured..");
-				ex.printStackTrace();
+				System.err.println("Failed to retreive a reply...");
+				
 				if(ex instanceof AmqpMessageReturnedException){
-					System.err.println(((AmqpMessageReturnedException) ex).getReturnedMessage().getMessageProperties().getMessageId());
+					System.err.println("Message returned exception occured..");
 				}
+				
+				ex.printStackTrace();
 			}
 		});
 		
 		//This is just a Java8 way of the above callback.
-		/*future.addCallback( sampleResponseMessage -> 
-									System.out.println("Response for request message:" + sampleResponseMessage),
+		/*future.addCallback( reply -> 
+									System.out.println("Reply received from the subscriber and thus acknowledged: " + reply),
 									
-									failure -> 
-									System.out.println("Didn't got the reply..Failure occured.. " + failure.getMessage())
-									);*/
+									exception -> 
+									System.err.println("Failed to retreive a reply..." + exception)
+								);*/
 		
 		
-		// The below commented block does exactly what the above block do, but asynchronously.
-	   /* Object reply = null;
-	    try {
-	        reply = future.get();
-	        System.out.println("Reply received and thus acknowledged: " +reply);
-	    }
-	    catch (ExecutionException e) {
-	       System.out.println("Didn't got the reply..Failure occured..");
-	       e.printStackTrace();
-	    } catch (InterruptedException e) {
-	    	 System.out.println("Didn't got the reply..Failure occured due to interruption");
+		// The below commented block does exactly what the above block do, but SYNCHRONOUSLY.
+		// If you need to get a reply synchronously I would suggest you to also look into standard rabbit template sendAndReceive methods
+		/*try {
+			Object reply = future.get();
+			System.out.println("Reply received and thus acknowledged: " + reply);
+		} catch (ExecutionException e) {
+			System.err.println("Failed to retreive a reply..");
+
+			if (e.getCause() instanceof AmqpMessageReturnedException)
+				System.err.println("Message returned exception occured..");
+
 			e.printStackTrace();
+		} catch (InterruptedException e) {
+	    	
+	    	 System.err.println("Failed to retreive a reply..");
+	    	 e.printStackTrace();
 		}*/
 		
 	

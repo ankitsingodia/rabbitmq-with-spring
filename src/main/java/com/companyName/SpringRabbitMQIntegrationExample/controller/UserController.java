@@ -16,9 +16,9 @@ public class UserController {
 	@RequestMapping("/rabbitMq")
 	public ModelAndView welcome()  {
 
-		eventPublisherService.publishEvent("This the message to be published");
-		
-//		eventPublisherService.publishEventInBatch("This the message to be published");
+		for (int i = 0; i < 10; i++) {
+			eventPublisherService.publishEvent("This the message to be published");
+		}
 		
 		return new ModelAndView("index", "message", "In Action");
 	}
