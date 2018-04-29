@@ -25,7 +25,7 @@ public class EventPublisherService {
 	public void publishEvent(final Object message){
 
 		
-		RabbitConverterFuture<String> future = this.asyncRabbitTemplate.convertSendAndReceive("ss",Constants.SNS_QUEUE, message,new MessagePostProcessor() {
+		RabbitConverterFuture<String> future = this.asyncRabbitTemplate.convertSendAndReceive("",Constants.SNS_QUEUE, message,new MessagePostProcessor() {
 		
 			@Override
 			public Message postProcessMessage(Message message) {
