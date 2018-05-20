@@ -23,7 +23,6 @@ public class EventPublisherService {
 	@Autowired
 	AsyncRabbitTemplate asyncRabbitTemplate;
 	
-	@Transactional
 	public void publishEventInBulk(final Object message){
 		for (int i = 0; i < 10; i++) {
 			publishEvent(message);
