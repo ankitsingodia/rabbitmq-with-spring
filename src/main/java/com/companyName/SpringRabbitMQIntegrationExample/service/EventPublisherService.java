@@ -10,6 +10,7 @@ import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate.RabbitConverterFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
@@ -21,6 +22,13 @@ public class EventPublisherService {
 	
 	@Autowired
 	AsyncRabbitTemplate asyncRabbitTemplate;
+	
+	@Transactional
+	public void publishEventInBulk(final Object message){
+		for (int i = 0; i < 10; i++) {
+			publishEvent(message);
+		}
+	}
 	
 	public void publishEvent(final Object message){
 
@@ -53,13 +61,13 @@ public class EventPublisherService {
 				if(result)
 					System.out.println("Message published successfully");
 				else
-					System.err.println("Publishing failed for a reason: " + future.getNackCause());
+					System.out.println("Publishing failed for a reason: " + future.getNackCause());
 				
 			}
 
 			@Override
 			public void onFailure(Throwable ex) {
-				System.err.println("Publishing failed due to an exception: " + ex);
+				System.out.println("Publishing failed due to an exception: " + ex);
 			}
 		});
 		
@@ -107,10 +115,10 @@ public class EventPublisherService {
 			@Override
 			public void onFailure(final Throwable ex) {
 				
-				System.err.println("Failed to retreive a reply...");
+				System.out.println("Failed to retreive a reply...");
 				
 				if(ex instanceof AmqpMessageReturnedException){
-					System.err.println("Message returned exception occured..");
+					System.out.println("Message returned exception occured..");
 				}
 				
 				ex.printStackTrace();
