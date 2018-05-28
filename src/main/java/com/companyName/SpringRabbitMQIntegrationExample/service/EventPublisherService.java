@@ -3,11 +3,14 @@ package com.companyName.SpringRabbitMQIntegrationExample.service;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.annotation.Resource;
+
 import org.springframework.amqp.core.AmqpMessageReturnedException;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate;
 import org.springframework.amqp.rabbit.AsyncRabbitTemplate.RabbitConverterFuture;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,14 +25,55 @@ public class EventPublisherService {
 	
 	@Autowired
 	AsyncRabbitTemplate asyncRabbitTemplate;
+
+	@Resource(name="rabbitsynctemplate")
+	RabbitTemplate rabbitTemplate;
 	
-	public void publishEventInBulk(final Object message){
+	/**
+	 * Method for publishing using AsyncRabbitTemplate
+	 * @param message
+	 */
+	public void publishEventInBulkAsync(final Object message){
 		for (int i = 0; i < 10; i++) {
-			publishEvent(message);
+			publishEventAysnc(message);
 		}
 	}
 	
-	public void publishEvent(final Object message){
+	/**
+	 * Method for publishing using RabbitTemplate
+	 * @param message
+	 * 
+	 */
+	@Transactional(rollbackFor={Exception.class})
+	public void publishEventInBulkSync(final Object message){
+		for (int i = 0; i < 10; i++) {
+			publishEventSync(message);
+		}
+	}
+	
+	
+	/**
+	 * Notes:
+	 * <li> if we pass the exchange as empty then it is picked as default(i.e see http://localhost:15672/#/exchanges)
+	 * 
+	 * @param message
+	 */
+	private void publishEventSync(Object message) {
+		
+		rabbitTemplate.convertAndSend("",Constants.SNS_QUEUE_2, message,new MessagePostProcessor() {
+		
+			@Override
+			public Message postProcessMessage(Message message) {
+				message.getMessageProperties().setTimestamp(new Date());
+				message.getMessageProperties().setMessageId(UUID.randomUUID().toString().substring(0,6));
+				return message;
+			}
+		});
+		
+	}
+
+
+	private void publishEventAysnc(final Object message){
 
 		
 		RabbitConverterFuture<String> future = this.asyncRabbitTemplate.convertSendAndReceive("",Constants.SNS_QUEUE, message,new MessagePostProcessor() {

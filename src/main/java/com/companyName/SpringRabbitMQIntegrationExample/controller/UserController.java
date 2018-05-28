@@ -14,9 +14,11 @@ public class UserController {
 	EventPublisherService eventPublisherService;
 
 	@RequestMapping("/rabbitMq")
-	public ModelAndView welcome()  {
+	public ModelAndView welcome() throws Exception  {
 
-		eventPublisherService.publishEventInBulk("This the message to be published");
+		eventPublisherService.publishEventInBulkAsync("This the message to be published asynchronously");
+		
+//		eventPublisherService.publishEventInBulkSync("This the message to be published synchronously");
 		
 		return new ModelAndView("index", "message", "In Action");
 	}
